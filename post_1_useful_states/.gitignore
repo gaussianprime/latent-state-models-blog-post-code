@@ -1,0 +1,20 @@
+# Per-run trajectory CSVs used by the earlier historical reproducer, which this repository
+# no longer carries. Nothing here reads them; the post's numbers live in sources/.
+/inputs/
+
+# Figure and comparison tables drawn by make_figure.py.
+/assets/
+
+# The earlier historical reproducer, kept on disk but out of the published repository.
+/analysis/
+
+# Trajectories, result snapshots and the extraction script: kept on disk, not
+# published. The scripts here take a trajectory directory as an argument.
+/data/
+/sources/
+/refresh_results.py
+
+/.venv/
+/.cache/
+/__pycache__/
+/generated/

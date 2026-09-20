@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ENV/
+
+# Caches and editor/OS artifacts
+.cache/
+.ipynb_checkpoints/
+.DS_Store
+.idea/
+.vscode/
+
+# Quarto render output
+.quarto/
+/_site/
+*.html
+
+# Post prose. The drafts, their outlines and bibliographies stay with the blog; this
+# repository carries the code and the result snapshots behind them.
+*.qmd
+outline.md
+refs.bib
+
+# Data 
+./inputs
+./sources
