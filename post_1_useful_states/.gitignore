@@ -2,7 +2,7 @@
 # no longer carries. Nothing here reads them; the post's numbers live in sources/.
 /inputs/
 
-# Figure and comparison tables drawn by make_figure.py.
+# Figures drawn by make_state_figures.py.
 /assets/
 
 # The earlier historical reproducer, kept on disk but out of the published repository.

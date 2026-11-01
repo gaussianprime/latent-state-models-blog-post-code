@@ -1,14 +1,13 @@
 """Draw what the latent states are, for sparse parity and modular addition.
 
-Reads per-run trajectories, fits the HMM and the GMM with the same fitter the
-regression uses (shared representation, K=6, fit seed 0), and writes state_raster,
-training_map and l1_mechanism into assets/.
+Reads per-run trajectories, fits the HMM and the GMM on all runs with the same
+fitter the regression uses (K=6, fit seed 0), and writes state_raster, training_map
+and l1_mechanism into assets/.
 
-Needs only a trajectory directory and parity_models.py beside it, and writes
-nothing outside assets/. Run it from this folder:
+Needs a trajectory directory, with parity_models.py and convergence_regression.py
+beside it, and writes nothing outside assets/. Run it from this folder:
 
     python3 make_state_figures.py --data <dir>          # <dir>/parity and <dir>/modular
-    python3 make_state_figures.py --root <research repo>  # read that repo's sweeps
 """
 import argparse
 from pathlib import Path
@@ -24,19 +23,9 @@ HERE = Path(__file__).resolve().parent
 _parser = argparse.ArgumentParser(description=__doc__)
 _parser.add_argument("--data", type=Path, default=HERE / "data",
                      help="directory holding parity/ and modular/ trajectory folders")
-_parser.add_argument("--root", type=Path,
-                     help="read the research repository's sweep outputs instead")
-_args = _parser.parse_args()
-DATA, ROOT = _args.data, _args.root.resolve() if _args.root else None
+DATA = _parser.parse_args().data
 from parity_models import WEIGHT_COLUMNS, zscore_run, fit_model
-
-SWEEPS = {"parity": "output/parity_rerun_20260912T202037Z",
-          "modular": "output/modular_rerun_20260914T083633Z"}
-
-
-def inputs(key):
-    """A trajectory directory: under --data by default, or the sweep's csv/ under --root."""
-    return DATA / key if ROOT is None else ROOT / SWEEPS[key] / "csv"
+from convergence_regression import FIT_SEEDS, averages_r2
 
 
 def read_csv(csvdir, seed):
@@ -85,10 +74,10 @@ def panels():
     data = {}
     for task, key, n, horizon in (("Sparse parity", "parity", 60, 300),
                                   ("Modular addition", "modular", 40, 500)):
-        runs, steps, y = load(inputs(key), n, horizon)
+        runs, steps, y = load(DATA / key, n, horizon)
         hmm_model = fit_model("hmm", runs, k=6, seed=0)
-        hmm = [hmm_model.states(x) for x in runs]
-        gmm = [fit_model("gmm", runs, k=6, seed=0).states(x) for x in runs]
+        hmm = [hmm_model.predict(x) for x in runs]
+        gmm = [fit_model("gmm", runs, k=6, seed=0).predict(x) for x in runs]
         order = np.argsort(y)
         out = {}
         for name, seqs in (("HMM", hmm), ("GMM", gmm)):
@@ -184,7 +173,7 @@ def map_figure(data):
 
 def l1_figure():
     """Why one averaged metric predicts convergence on sparse parity."""
-    csvdir = inputs("parity")
+    csvdir = DATA / "parity"
     curves, y = [], []
     for s in range(60):
         df = read_csv(csvdir, s)
@@ -198,6 +187,7 @@ def l1_figure():
     aligned = np.stack([[L[i, t + o] for o in off] for i, t in enumerate(y)])
     cv_aligned = np.median(aligned.std(0) / aligned.mean(0))
     r = np.corrcoef(means, y)[0, 1]
+    r2 = np.mean([averages_r2(means[:, None], y, fit_seed) for fit_seed in FIT_SEEDS])
     print(f"L1 norm at convergence {at_conv.mean():.0f} +/- {at_conv.std():.0f}; spread across runs "
           f"{cv_fixed*100:.0f}% at a fixed epoch, {cv_aligned*100:.1f}% aligned; "
           f"corr(run average, convergence epoch) = {r:+.3f}", flush=True)
@@ -228,7 +218,7 @@ def l1_figure():
     axC.plot(xs, np.polyval(np.polyfit(means, y, 1), xs), color=MUTED, lw=1.5, zorder=1)
     axC.set_xlabel("run average of the L1 norm"); axC.set_ylabel("convergence epoch")
     axC.set_title("so the run average recovers\nthe timing", loc="left", color=INK, pad=6)
-    axC.annotate(f"r = {r:.2f}\nfive-fold R² = 0.94\nfrom this one feature",
+    axC.annotate(f"r = {r:.2f}\nfive-fold R² = {r2:.2f}\nfrom this one feature",
                  (0.04, 0.96), xycoords="axes fraction", va="top", color=INK2, fontsize=8.5)
 
     for ax in (axA, axB, axC):
